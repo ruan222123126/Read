@@ -1,0 +1,120 @@
+import type { Book, BookSourceInfo, HealthResponse } from "@read/shared";
+
+export interface SearchItem {
+  name: string;
+  author: string;
+  book_url: string;
+  cover_url: string | null;
+  intro: string | null;
+  last_chapter: string | null;
+  kind: string | null;
+  source_id: string;
+  source_name: string;
+}
+
+export interface SearchResponse {
+  items: SearchItem[];
+  searched_sources: number;
+  failures: { source_id: string; source_name: string; reason: string }[];
+}
+
+export interface TocResponse {
+  chapters: { title: string; url: string }[];
+}
+
+export interface ContentResponse {
+  paragraphs: string[];
+  hashes: string[];
+}
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE_URL}/api/v1${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as
+      | { code?: string; message?: string }
+      | null;
+    throw new ApiError(res.status, body?.code ?? "unknown", body?.message ?? res.statusText);
+  }
+
+  return (await res.json()) as T;
+}
+
+export const api = {
+  health: () => request<HealthResponse>("/health"),
+
+  listBooks: (params: { q?: string; limit?: number; offset?: number } = {}) => {
+    const search = new URLSearchParams();
+    if (params.q) search.set("q", params.q);
+    if (params.limit) search.set("limit", String(params.limit));
+    if (params.offset) search.set("offset", String(params.offset));
+    const qs = search.toString();
+    return request<Book[]>(`/books${qs ? `?${qs}` : ""}`);
+  },
+
+  getBook: (id: string) => request<Book>(`/books/${id}`),
+
+  createBook: (input: {
+    title: string;
+    author: string;
+    description?: string;
+    cover_url?: string;
+  }) =>
+    request<Book>("/books", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  listSources: () => request<BookSourceInfo[]>("/sources"),
+
+  importSources: (json: string) =>
+    request<{ imported: number; skipped: number; source_ids: string[] }>("/sources/import", {
+      method: "POST",
+      body: JSON.stringify({ json }),
+    }),
+
+  /** 书源搜索：并发查所有可用书源 */
+  search: (params: { q: string; sourceId?: string; page?: number }) => {
+    const search = new URLSearchParams({ q: params.q });
+    if (params.sourceId) search.set("source_id", params.sourceId);
+    if (params.page) search.set("page", String(params.page));
+    return request<SearchResponse>(`/explore/search?${search.toString()}`);
+  },
+
+  /** 抓目录 */
+  toc: (params: { sourceId: string; bookUrl: string }) => {
+    const search = new URLSearchParams({
+      source_id: params.sourceId,
+      book_url: params.bookUrl,
+    });
+    return request<TocResponse>(`/explore/toc?${search.toString()}`);
+  },
+
+  /** 抓正文（含段落指纹） */
+  content: (params: { sourceId: string; chapterUrl: string }) => {
+    const search = new URLSearchParams({
+      source_id: params.sourceId,
+      chapter_url: params.chapterUrl,
+    });
+    return request<ContentResponse>(`/explore/content?${search.toString()}`);
+  },
+};

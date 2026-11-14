@@ -1,0 +1,11 @@
+{
+  "name": "拾页",
+  "short_name": "拾页",
+  "description": "本地优先的沉浸式小说阅读器",
+  "start_url": "/shelf",
+  "display": "standalone",
+  "background_color": "#f6f1e7",
+  "theme_color": "#f6f1e7",
+  "lang": "zh-CN",
+  "icons": []
+}

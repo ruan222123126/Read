@@ -1,0 +1,20 @@
+[package]
+name = "read-fetcher"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+read-source-engine.workspace = true
+
+anyhow.workspace = true
+reqwest.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+url = "2"
+
+[dev-dependencies]
+axum.workspace = true
+encoding_rs.workspace = true
+tokio.workspace = true

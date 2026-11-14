@@ -1,0 +1,39 @@
+# --- node ---
+node_modules/
+.pnpm-store/
+*.tsbuildinfo
+next-env.d.ts
+
+# --- next.js ---
+.next/
+out/
+.turbo/
+
+# --- rust ---
+target/
+**/*.rs.bk
+
+# --- env ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- editors / os ---
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- logs / tmp ---
+*.log
+logs/
+tmp/
+.tmp/
+
+# --- data ---
+/data/
+*.sqlite
+*.sqlite3

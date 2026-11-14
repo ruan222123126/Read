@@ -1,0 +1,18 @@
+[package]
+name = "read-source-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+read-domain.workspace = true
+
+encoding_rs.workspace = true
+regex.workspace = true
+scraper.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+read-domain.workspace = true

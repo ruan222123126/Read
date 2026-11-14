@@ -1,0 +1,36 @@
+[
+  {
+    "bookSourceName": "本地示例源",
+    "bookSourceUrl": "http://127.0.0.1:9911",
+    "bookSourceGroup": "开发调试",
+    "bookSourceType": 0,
+    "enabled": true,
+    "weight": 100,
+    "searchUrl": "{{baseUrl}}/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "class.result-list@class.result-item",
+      "name": "class.book-name@text",
+      "author": "class.book-author@text",
+      "bookUrl": "class.book-name@href",
+      "coverUrl": "tag.img@src",
+      "intro": "class.intro@text",
+      "lastChapter": "class.latest@text",
+      "kind": "class.cat@text"
+    },
+    "ruleBookInfo": {
+      "name": "id.info tag.h1@text",
+      "author": "id.info class.author@text",
+      "intro": "id.intro@text",
+      "coverUrl": "id.info tag.img@src",
+      "tocUrl": "class.btn-toc@href"
+    },
+    "ruleToc": {
+      "chapterList": "id.chapter-list@tag.li",
+      "chapterName": "tag.a@text",
+      "chapterUrl": "tag.a@href"
+    },
+    "ruleContent": {
+      "content": "id.content##广告.*##"
+    }
+  }
+]
