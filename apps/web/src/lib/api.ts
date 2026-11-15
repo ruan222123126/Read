@@ -27,6 +27,26 @@ export interface ContentResponse {
   hashes: string[];
 }
 
+export interface LocalBookItem {
+  id: string;
+  title: string;
+  author: string;
+  description: string | null;
+  cover_url: string | null;
+  format: string;
+  chapter_count: number;
+}
+
+export interface UploadLocalBookInput {
+  title: string;
+  author: string;
+  description?: string | null;
+  cover_data?: string | null;
+  format: string;
+  text_hash: string;
+  chapters: { title: string; paragraphs: string[] }[];
+}
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/backend";
 
 export class ApiError extends Error {
@@ -116,5 +136,32 @@ export const api = {
       chapter_url: params.chapterUrl,
     });
     return request<ContentResponse>(`/explore/content?${search.toString()}`);
+  },
+
+  /** 上传解析好的整本书到书库；text_hash 重复时返回已有记录并带 duplicate 标记 */
+  uploadLocalBook: (input: UploadLocalBookInput) =>
+    request<LocalBookItem & { duplicate?: boolean }>("/local-books", {
+      method: "POST",
+      body: JSON.stringify({
+        title: input.title,
+        author: input.author,
+        description: input.description ?? undefined,
+        cover_data: input.cover_data ?? undefined,
+        format: input.format,
+        text_hash: input.text_hash,
+        chapters: input.chapters,
+      }),
+    }),
+
+  /** 书库列表（上传的书） */
+  listLocalBooks: () => request<LocalBookItem[]>("/local-books"),
+
+  /** 上传书的目录 */
+  localToc: (id: string) => request<TocResponse>(`/local-books/${id}/toc`),
+
+  /** 上传书的正文 */
+  localContent: (params: { bookId: string; url: string }) => {
+    const search = new URLSearchParams({ url: params.url });
+    return request<ContentResponse>(`/local-books/${params.bookId}/content?${search.toString()}`);
   },
 };

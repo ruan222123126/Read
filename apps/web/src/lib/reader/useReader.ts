@@ -58,7 +58,10 @@ export async function loadChapter(
   const cached = await db.chapters.get(key);
   if (cached) return cached;
 
-  const res = await api.content({ sourceId, chapterUrl });
+  // 上传的书：正文在后端书库里（sourceId 形如 local:<uuid>）
+  const res = sourceId.startsWith("local:")
+    ? await api.localContent({ bookId: sourceId.slice(6), url: chapterUrl })
+    : await api.content({ sourceId, chapterUrl });
   const record: CachedChapter = {
     id: key,
     bookId,

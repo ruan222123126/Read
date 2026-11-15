@@ -54,7 +54,10 @@ export default function ReaderPage() {
           setFatal("这本书缺少书源信息，请回书城重新打开。");
           return;
         }
-        const { chapters } = await api.toc({ sourceId: item.sourceId, bookUrl: item.bookUrl });
+        // 上传的书：目录直接来自书库
+        const { chapters } = item.sourceId.startsWith("local:")
+          ? await api.localToc(item.sourceId.slice(6))
+          : await api.toc({ sourceId: item.sourceId, bookUrl: item.bookUrl });
         if (!chapters.length) {
           setFatal("这个书源没有返回章节列表。");
           return;

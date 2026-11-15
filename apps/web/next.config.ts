@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   experimental: {
     // 阅读器与书源解析都用 TS 直接跑，保持构建快
     optimizePackageImports: ["@read/shared"],
+    // /backend 反代默认只缓冲 10MB 请求体；上传整本书的 JSON（正文 + 封面）
+    // 可以到几十 MB，放宽到 100MB，与服务端 body 上限保持一致
+    proxyClientMaxBodySize: "100mb",
   },
   // 允许局域网内手机等设备访问 dev server
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.*.*.*", "*.local"],

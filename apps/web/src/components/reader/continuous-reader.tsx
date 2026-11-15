@@ -368,9 +368,23 @@ export function ContinuousReader({
                 {chapter.title}
               </h2>
               <div className="reader-body" style={bodyStyle}>
-                {chapter.paragraphs.map((text, index) => (
-                  <p key={index}>{text}</p>
-                ))}
+                {chapter.paragraphs.map((text, index) => {
+                  // 上传书的分页哨兵不该露出来
+                  if (text === "\u0000") return null;
+                  // 插图段落：解析器把 EPUB 里的图片转成了 data URI
+                  if (text.startsWith("data:image/")) {
+                    return (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={index}
+                        src={text}
+                        alt=""
+                        className="mx-auto my-6 block max-w-full"
+                      />
+                    );
+                  }
+                  return <p key={index}>{text}</p>;
+                })}
               </div>
             </section>
           ))}
