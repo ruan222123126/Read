@@ -1,0 +1,8 @@
+# Caddy 生产反代：自动申请并续期 Let's Encrypt 证书。
+# 配合 docker-compose.prod.yml 的 caddy 服务（--profile tls）使用；
+# DOMAIN 从 compose 的 environment 传入。
+
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}

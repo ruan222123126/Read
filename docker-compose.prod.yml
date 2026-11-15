@@ -1,0 +1,131 @@
+# 生产部署编排：web + api + postgres + redis + minio（+ 可选 caddy）。
+#
+# 首次启动 / 更新：
+#   cp .env.production.example .env   # 先改密码！
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# 数据库迁移由 api 启动时自动执行（SQLx migrate），无需手动跑。
+# 环境变量从同目录 .env 读取，模板见 .env.production.example。
+#
+# 详细步骤（含域名 + HTTPS、备份、更新流程）见 docs/deploy.md。
+
+name: read
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: read
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请先在 .env 中设置 POSTGRES_PASSWORD}
+      POSTGRES_DB: read
+      # 中文书名/作者排序需要
+      LANG: C.UTF-8
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U read -d read"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # 只在 compose 网络内可达；需要临时调试时再放开端口
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-readminio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?请先在 .env 中设置 MINIO_ROOT_PASSWORD}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: apps/api
+    image: read-api:latest
+    restart: unless-stopped
+    environment:
+      APP__HOST: 0.0.0.0
+      APP__PORT: 8080
+      RUST_LOG: ${RUST_LOG:-read_server=info,tower_http=info}
+      DATABASE_URL: postgres://read:${POSTGRES_PASSWORD}@postgres:5432/read
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: read-assets
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-readminio}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      SOURCES_DIR: /app/sources
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    # 只在 compose 网络内可达（web 通过 http://api:8080 反代）；
+    # 需要绕过 web 直接调试 API 时再放开
+    # ports:
+    #   - "127.0.0.1:8080:8080"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: read-web:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # 运行期兜底；实际反代目标在镜像构建期已固定为 http://api:8080
+      API_INTERNAL_URL: http://api:8080
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      - api
+
+  # 可选：自动 HTTPS 反向代理。
+  # 在 .env 里设置 DOMAIN 并解析 A 记录到本机，然后：
+  #   docker compose -f docker-compose.prod.yml --profile tls up -d
+  # 用了 caddy 就不再需要 web 的 ports（可注释掉），证书由 Caddy 自动签发续期
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    profiles: ["tls"]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?请先在 .env 中设置 DOMAIN}
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  caddydata:
+  caddyconfig:

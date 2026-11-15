@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@read/shared"],
+  // Docker 部署用：构建时额外产出 .next/standalone（自带精简 node_modules），
+  // 本地 `next dev` / `next start` 不受影响
+  output: "standalone",
   experimental: {
     // 阅读器与书源解析都用 TS 直接跑，保持构建快
     optimizePackageImports: ["@read/shared"],

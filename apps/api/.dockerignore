@@ -1,0 +1,6 @@
+# apps/api 是独立构建上下文（Rust workspace 自带 Cargo.lock），
+# 排除本地编译产物，避免几百 MB 的 target/ 进上下文。
+
+target/
+.env
+.env.*

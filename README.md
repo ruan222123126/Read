@@ -67,6 +67,18 @@ pnpm dev:lan
 - 首次连不上多半是 Windows 防火墙：放行 Node.js，或执行
   `netsh advfirewall firewall add rule name="read-dev" dir=in action=allow protocol=TCP localport=3000`
 
+## 部署到服务器
+
+Linux 服务器上一条 Docker Compose 拉起 web / api / PostgreSQL / Redis / MinIO，
+可选 Caddy 自动 HTTPS：
+
+```bash
+cp .env.production.example .env   # 改掉密码
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+完整步骤（域名 + HTTPS、日常更新、备份恢复、排查）见 **[docs/deploy.md](docs/deploy.md)**。
+
 ## 端到端验证（不需要数据库）
 
 仓库内置了一个假源站和一条书源，用来验证完整链路：

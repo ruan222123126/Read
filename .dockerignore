@@ -1,0 +1,28 @@
+# 仓库根目录是 apps/web/Dockerfile 的构建上下文（见该文件头部说明）。
+# 只需要 web + shared 的源码和 pnpm 清单，其余全部排除，避免把
+# node_modules / 构建产物 / 密钥打进构建上下文。
+
+node_modules
+**/node_modules
+apps/web/.next
+packages/*/dist
+packages/*/node_modules
+
+.git
+.github
+.zcode
+.vscode
+.scratch
+
+# 密钥与环境文件，绝不进镜像
+.env
+.env.*
+!.env.example
+
+# 部署与其他应用
+docker-compose*.yml
+apps/api/target
+docs
+
+**/*.md
+!README.md
