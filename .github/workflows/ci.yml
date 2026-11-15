@@ -15,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 版本从根 package.json 的 packageManager 字段读取；
+      # 不能在这里再写 version，否则 action-setup 报 "Multiple versions of pnpm"
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
