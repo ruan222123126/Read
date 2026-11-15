@@ -275,8 +275,8 @@ fn render_text_with_breaks(root: ElementRef<'_>) -> String {
 
     for node in root.descendants() {
         // 是否有祖先（或自己）落在噪声集合里
-        let inside_noise = noisy.contains(&node.id())
-            || node.ancestors().any(|a| noisy.contains(&a.id()));
+        let inside_noise =
+            noisy.contains(&node.id()) || node.ancestors().any(|a| noisy.contains(&a.id()));
 
         match node.value() {
             Node::Element(e) if is_noise_element(e) => {
@@ -292,10 +292,8 @@ fn render_text_with_breaks(root: ElementRef<'_>) -> String {
                     out.push('\n');
                 }
             }
-            Node::Text(t) => {
-                if !inside_noise {
-                    out.push_str(t);
-                }
+            Node::Text(t) if !inside_noise => {
+                out.push_str(t);
             }
             _ => {}
         }
@@ -307,13 +305,7 @@ fn render_text_with_breaks(root: ElementRef<'_>) -> String {
 fn is_noise_element(el: &scraper::node::Element) -> bool {
     /// 这些标签的内容一律不要：脚本、样式、无脚本降级块（里面常是原始 HTML 字符串）
     const NOISE_TAGS: &[&str] = &[
-        "script",
-        "style",
-        "noscript",
-        "template",
-        "iframe",
-        "svg",
-        "object",
+        "script", "style", "noscript", "template", "iframe", "svg", "object",
     ];
     const NOISE_IDS: &[&str] = &[
         "headerContainer",
