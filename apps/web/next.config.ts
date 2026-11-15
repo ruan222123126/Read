@@ -7,6 +7,14 @@ const nextConfig: NextConfig = {
     // 阅读器与书源解析都用 TS 直接跑，保持构建快
     optimizePackageImports: ["@read/shared"],
   },
+  // 允许局域网内手机等设备访问 dev server
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.*.*.*", "*.local"],
+  async rewrites() {
+    // 浏览器统一走同源 /backend，由 Next 服务器反代到 Rust API。
+    // 这样手机访问 http://<电脑IP>:3000 也能用，不需要改 base url、也不会撞 CORS。
+    const target = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8080";
+    return [{ source: "/backend/:path*", destination: `${target}/:path*` }];
+  },
   async headers() {
     return [
       {

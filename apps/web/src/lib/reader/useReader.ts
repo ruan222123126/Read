@@ -27,10 +27,20 @@ export function readTocCache(bookId: string): TocCache | null {
   const raw = sessionStorage.getItem(tocStorageKey(bookId));
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as TocCache;
+    const parsed = JSON.parse(raw) as TocCache;
+    // 坏缓存（比如某些页面上抓到的空目录）直接当没有，让调用方回源重建
+    return isUsableToc(parsed) ? parsed : null;
   } catch {
     return null;
   }
+}
+
+function isUsableToc(toc: TocCache): boolean {
+  return (
+    Array.isArray(toc?.chapters) &&
+    toc.chapters.length > 0 &&
+    toc.chapters.every((c) => Boolean(c && typeof c.url === "string" && c.url))
+  );
 }
 
 export function writeTocCache(bookId: string, toc: TocCache) {

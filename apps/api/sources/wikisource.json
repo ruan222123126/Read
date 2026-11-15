@@ -1,0 +1,31 @@
+[
+  {
+    "bookSourceName": "维基文库",
+    "bookSourceUrl": "https://zh.wikisource.org",
+    "bookSourceGroup": "公版书",
+    "bookSourceType": 0,
+    "enabled": true,
+    "weight": 50,
+    "searchUrl": "{{baseUrl}}/w/index.php?search={{key}}&title=Special:搜索&fulltext=1&ns0=1",
+    "ruleSearch": {
+      "bookList": "class.mw-search-result",
+      "name": "class.mw-search-result-heading tag.a@text",
+      "author": "",
+      "bookUrl": "class.mw-search-result-heading tag.a@href",
+      "intro": "class.searchresult@text"
+    },
+    "ruleBookInfo": {
+      "name": "id.firstHeading@text",
+      "author": "",
+      "intro": "id.mw-content-text@text"
+    },
+    "ruleToc": {
+      "chapterList": "class.multicol tag.li",
+      "chapterName": "tag.a@text",
+      "chapterUrl": "tag.a@href"
+    },
+    "ruleContent": {
+      "content": "id.mw-content-text##编辑##"
+    }
+  }
+]

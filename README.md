@@ -52,6 +52,21 @@ pnpm dev:api          # http://localhost:8080
 pnpm dev:web          # http://localhost:3000
 ```
 
+### 手机访问（局域网调试）
+
+```bash
+pnpm dev:lan
+```
+
+启动后终端会打印形如 `http://192.168.1.10:3000` 的地址，手机连同一个 Wi-Fi
+直接打开即可。要点：
+
+- Next 监听 `0.0.0.0`，API 也监听 `0.0.0.0`（见 `.env.example`）。
+- 浏览器一律请求同源 `/backend/*`，由 Next 服务端反代到 Rust API，
+  所以**不需要**在手机上改 `localhost`，也不会遇到 CORS。
+- 首次连不上多半是 Windows 防火墙：放行 Node.js，或执行
+  `netsh advfirewall firewall add rule name="read-dev" dir=in action=allow protocol=TCP localport=3000`
+
 ## 端到端验证（不需要数据库）
 
 仓库内置了一个假源站和一条书源，用来验证完整链路：
@@ -152,6 +167,7 @@ JS 只负责数一共几页（`scrollWidth / clientWidth`）并做位移，
 | 命令 | 作用 |
 | --- | --- |
 | `pnpm dev:web` | 前端开发服务器 |
+| `pnpm dev:lan` | 前端开发服务器（打印手机可用的局域网地址） |
 | `pnpm dev:api` | 后端开发服务器 |
 | `pnpm test` | 前端 + 后端全部单测（35 + 17） |
 | `pnpm lint` | ESLint + clippy（`-D warnings`） |

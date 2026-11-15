@@ -14,6 +14,10 @@ export interface ShelfItem {
   title: string;
   author: string;
   coverUrl?: string;
+  /** 选定的书源，换源时更新 */
+  sourceId?: string;
+  /** 该书源下的书籍页地址，用于重建目录 */
+  bookUrl?: string;
   /** 当前阅读到的章节 URL */
   currentChapterUrl?: string;
   /** 阅读进度 0..1 */
@@ -45,8 +49,6 @@ export interface ReaderSettings {
   fontFamily: "serif" | "kai" | "sans";
   fontSize: number;
   lineHeight: number;
-  /** 左右分页 / 上下滚动 */
-  mode: "paged" | "scroll";
   /** 纸张色调：warm | ivory | gray | night */
   theme: "warm" | "ivory" | "gray" | "night";
   letterSpacing: number;
@@ -58,7 +60,6 @@ export const defaultSettings: ReaderSettings = {
   fontFamily: "serif",
   fontSize: 18,
   lineHeight: 2,
-  mode: "paged",
   theme: "warm",
   letterSpacing: 0,
   paragraphIndent: true,

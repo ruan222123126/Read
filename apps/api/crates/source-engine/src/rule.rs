@@ -135,7 +135,7 @@ fn split_attr(body: &str) -> (String, Option<String>) {
     (body.replace('@', " "), None)
 }
 
-fn is_attr_name(attr: &str) -> bool {
+pub(crate) fn is_attr_name(attr: &str) -> bool {
     if attr.is_empty() || attr.contains('.') || attr.contains(' ') || attr.contains('>') {
         return false;
     }

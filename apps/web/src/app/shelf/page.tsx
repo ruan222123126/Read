@@ -50,7 +50,7 @@ export default function ShelfPage() {
         <ul className="mt-10 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
           {items.map((item) => (
             <li key={item.id}>
-              <Link href={`/read/${item.bookId}`} className="group block">
+              <Link href={`/read/${encodeURIComponent(item.bookId)}`} className="group block">
                 <div className="aspect-[3/4] w-full overflow-hidden rounded-sm border border-[var(--color-paper-edge)] bg-[var(--color-paper-deep)]">
                   {item.coverUrl ? (
                     // 封面来自远端书源，用原生 img 避免 next/image 域名白名单

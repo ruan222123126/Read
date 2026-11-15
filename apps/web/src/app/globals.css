@@ -101,28 +101,6 @@ body {
   color: var(--color-seal);
 }
 
-/* 分栏翻页容器。
-   页宽由容器查询单位 100cqw 决定 —— 一页恰好等于视口宽度，
-   不依赖 JS 测量像素，首帧就是正确的分栏。 */
-.reader-viewport {
-  container-type: inline-size;
-}
-
-.paged-columns {
-  column-gap: 0;
-  column-fill: auto;
-  column-width: 100cqw;
-  height: 100%;
-  transition: transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
-  will-change: transform;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .paged-columns {
-    transition: none;
-  }
-}
-
 /* 滚动条弱化，避免打断阅读 */
 .reader-scroll {
   scrollbar-width: thin;

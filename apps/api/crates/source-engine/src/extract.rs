@@ -105,11 +105,18 @@ pub fn extract_search(doc: &Doc, rule: &SearchRule, source_name: &str) -> Vec<Se
     };
 
     let pick = |item: &ElementRef<'_>, sub: &str| -> Option<String> {
+        if sub.trim().is_empty() {
+            return None;
+        }
         let r = Rule::parse(sub).ok()?;
+        // 直接对当前节点取值：`text` / `href` / `@href` / `ownText`
+        if is_self_value_rule(&r) {
+            return non_empty(extract_value(*item, self_attr(&r)));
+        }
         let sel = Selector::parse(&legado_to_css(&r.body)).ok()?;
         let el = item.select(&sel).next()?;
         let v = extract_value(el, r.attr.as_deref()).trim().to_string();
-        if v.is_empty() { None } else { Some(v) }
+        (!v.is_empty()).then_some(v)
     };
 
     doc.html
@@ -205,32 +212,154 @@ fn is_noise(line: &str) -> bool {
 }
 
 fn sub_value(item: &ElementRef<'_>, rule: &Rule) -> Option<String> {
+    // 直接对当前节点取值：`text` / `href` / `@href` / `ownText`
+    if is_self_value_rule(rule) {
+        return non_empty(extract_value(*item, self_attr(rule)));
+    }
+
     let sel = Selector::parse(&legado_to_css(&rule.body)).ok()?;
     let el = item.select(&sel).next()?;
     let v = extract_value(el, rule.attr.as_deref()).trim().to_string();
     (!v.is_empty()).then_some(v)
 }
 
+fn non_empty(v: String) -> Option<String> {
+    let t = v.trim().to_string();
+    (!t.is_empty()).then_some(t)
+}
+
+/// 判断规则是否是「取当前节点自身的值」，而不是「在当前节点下查找子节点」。
+///
+/// Legado 里 `text`、`ownText`、`href`、`@href`、`text@href` 都表示直接取值。
+fn is_self_value_rule(rule: &Rule) -> bool {
+    if matches!(rule.body.as_str(), "text" | "ownText" | "html") {
+        return true;
+    }
+    // `@href`：纯属性取值
+    if rule.body.is_empty() && rule.attr.is_some() {
+        return true;
+    }
+    // `href` / `src` / `content`：裸属性名
+    rule.attr.is_none() && crate::rule::is_attr_name(&rule.body)
+}
+
+/// 把「自身取值」规则映射为 `extract_value` 需要的属性名。
+fn self_attr(rule: &Rule) -> Option<&str> {
+    if let Some(attr) = rule.attr.as_deref() {
+        return Some(attr);
+    }
+    match rule.body.as_str() {
+        "text" | "ownText" | "html" => Some(rule.body.as_str()),
+        other => Some(other),
+    }
+}
+
 /// 按 DOM 顺序渲染文本，把 `<br>` 与块级元素边界转成换行。
+///
+/// 会跳过站点噪声子树（导航、页头、工具栏、脚注等），否则正文里
+/// 会混进「姊妹计划」「数据项」「编辑」这类无关文字。
 fn render_text_with_breaks(root: ElementRef<'_>) -> String {
     use scraper::node::Node;
+    use std::collections::HashSet;
+
+    // 先收集所有噪声子树的根节点 id，遍历时跳过它们的整棵子树
+    let noisy: HashSet<_> = root
+        .descendants()
+        .filter_map(|n| match n.value() {
+            Node::Element(e) if is_noise_element(e) => Some(n.id()),
+            _ => None,
+        })
+        .collect();
 
     let mut out = String::new();
+
     for node in root.descendants() {
+        // 是否有祖先（或自己）落在噪声集合里
+        let inside_noise = noisy.contains(&node.id())
+            || node.ancestors().any(|a| noisy.contains(&a.id()));
+
         match node.value() {
-            Node::Text(t) => out.push_str(t),
+            Node::Element(e) if is_noise_element(e) => {
+                // 噪声子树根，整棵跳过
+            }
             Node::Element(e) => {
-                if matches!(
-                    e.name(),
-                    "br" | "p" | "div" | "li" | "tr" | "h1" | "h2" | "h3"
-                ) {
+                if !inside_noise
+                    && matches!(
+                        e.name(),
+                        "br" | "p" | "div" | "li" | "tr" | "h1" | "h2" | "h3" | "dd" | "dl"
+                    )
+                {
                     out.push('\n');
+                }
+            }
+            Node::Text(t) => {
+                if !inside_noise {
+                    out.push_str(t);
                 }
             }
             _ => {}
         }
     }
     out
+}
+
+/// 站点噪声元素：导航、页头、脚注、工具条、隐藏块。
+fn is_noise_element(el: &scraper::node::Element) -> bool {
+    /// 这些标签的内容一律不要：脚本、样式、无脚本降级块（里面常是原始 HTML 字符串）
+    const NOISE_TAGS: &[&str] = &[
+        "script",
+        "style",
+        "noscript",
+        "template",
+        "iframe",
+        "svg",
+        "object",
+    ];
+    const NOISE_IDS: &[&str] = &[
+        "headerContainer",
+        "mw-navigation",
+        "mw-panel",
+        "mw-head",
+        "catlinks",
+        "printfooter",
+        "mw-indicator-~ext-wikisource-download",
+    ];
+    const NOISE_CLASSES: &[&str] = &[
+        "noprint",
+        "mw-editsection",
+        "printfooter",
+        "catlinks",
+        "mw-jump-link",
+        "vector-header",
+        "vector-toc",
+        "vector-column-start",
+        "vector-column-end",
+        "plainSister",
+        "sistersitebox",
+        "mw-hidden-catlinks",
+    ];
+
+    if NOISE_TAGS.contains(&el.name()) {
+        return true;
+    }
+    if let Some(id) = el.attr("id")
+        && NOISE_IDS.contains(&id)
+    {
+        return true;
+    }
+    if let Some(class) = el.attr("class") {
+        let has = class.split_whitespace();
+        for c in has {
+            if NOISE_CLASSES.contains(&c) {
+                return true;
+            }
+        }
+    }
+    // 隐藏块
+    if el.attr("style").is_some_and(|s| s.contains("display:none")) {
+        return true;
+    }
+    false
 }
 
 #[cfg(test)]
@@ -289,5 +418,68 @@ mod tests {
         };
         let out = extract_content(&doc, &rule);
         assert_eq!(out, vec!["正文一", "正文二"]);
+    }
+
+    /// 真实场景：维基文库目录的 chapterName 就是 `text`，chapterUrl 是 `href`，
+    /// 表示直接取 <a> 自身的文本与属性，而不是在它内部继续查找。
+    #[test]
+    fn supports_self_value_rules_in_toc() {
+        let html = r#"
+        <div id="mw-content-text">
+          <ul>
+            <li><a href="/wiki/西遊記/第001回">第一回</a></li>
+            <li><a href="/wiki/西遊記/第002回">第二回</a></li>
+          </ul>
+        </div>"#;
+        let doc = Doc::parse(html);
+        let rule = TocRule {
+            chapter_list: "id.mw-content-text tag.a".into(),
+            chapter_name: "text".into(),
+            chapter_url: "href".into(),
+            ..Default::default()
+        };
+        let out = extract_toc(&doc, &rule);
+        assert_eq!(out.len(), 2, "应解析出两章: {out:?}");
+        assert_eq!(out[0].title, "第一回");
+        assert_eq!(out[0].url, "/wiki/西遊記/第001回");
+        assert_eq!(out[1].title, "第二回");
+    }
+
+    /// 导航、页头、脚注等噪声子树必须整棵剔除，不能只剔除根节点自身的文本。
+    #[test]
+    fn drops_noise_subtrees_in_content() {
+        let html = r#"
+        <div id="content">
+          <div id="headerContainer"><span>西遊記</span><span>作者：吳承恩</span></div>
+          <p>詩曰：</p>
+          <ul class="noprint"><li>姊妹计划: 数据项</li></ul>
+          <p>混沌未分天地亂。</p>
+        </div>"#;
+        let doc = Doc::parse(html);
+        let rule = ContentRule {
+            content: "#content".into(),
+            ..Default::default()
+        };
+        let out = extract_content(&doc, &rule);
+        assert_eq!(out, vec!["詩曰：", "混沌未分天地亂。"], "{out:?}");
+    }
+
+    #[test]
+    fn supports_at_prefixed_attr_in_list_rule() {
+        // Legado 语义：`@href` 取「当前节点自身」的属性。
+        // 所以这里的 bookList 直接选中 <a>。
+        let html = r#"<div><a href="/b/1">书</a></div>"#;
+        let doc = Doc::parse(html);
+        let rule = SearchRule {
+            book_list: "tag.a".into(),
+            name: "text".into(),
+            author: "".into(),
+            book_url: "@href".into(),
+            ..Default::default()
+        };
+        let out = extract_search(&doc, &rule, "源");
+        assert_eq!(out.len(), 1, "{out:?}");
+        assert_eq!(out[0].name, "书");
+        assert_eq!(out[0].book_url, "/b/1");
     }
 }

@@ -62,25 +62,32 @@ export default function ExplorePage() {
     mutationFn: async (book: Aggregated) => {
       const now = Date.now();
       const bookId = `${book.name}::${book.author}`;
+      // 同时缓存目录，便于阅读器首屏直接出章节
+      const primary = book.sources[0];
       await db.shelf.put({
         id: bookId,
         bookId,
         title: book.name,
         author: book.author,
         coverUrl: book.cover ?? undefined,
+        sourceId: primary?.source_id,
+        bookUrl: primary?.book_url,
         progress: 0,
         addedAt: now,
         lastReadAt: now,
         cached: false,
       });
-      // 同时缓存目录，便于阅读器首屏直接出章节
-      const primary = book.sources[0];
       if (primary) {
         try {
           const toc = await api.toc({
             sourceId: primary.source_id,
             bookUrl: primary.book_url,
           });
+          // 抓不到章节列表（比如加进来的是单篇/消歧义页）就不写缓存，
+          // 让阅读器回源重抓，给出「没有返回章节列表」的真实提示
+          if (toc.chapters.length === 0) {
+            return bookId;
+          }
           sessionStorage.setItem(
             `toc:${bookId}`,
             JSON.stringify({

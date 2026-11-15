@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "pnpm --parallel --filter \"./apps/web\" --filter \"./packages/*\" dev",
     "dev:web": "pnpm --filter @read/web dev",
+    "dev:lan": "pnpm --filter @read/web dev:lan",
     "dev:api": "cargo run --manifest-path apps/api/Cargo.toml -p read-server",
     "build": "pnpm --filter @read/web build",
     "build:api": "cargo build --release --manifest-path apps/api/Cargo.toml",
