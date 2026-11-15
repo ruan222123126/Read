@@ -348,10 +348,7 @@ fn is_noise_element(el: &scraper::node::Element) -> bool {
         }
     }
     // 隐藏块
-    if el.attr("style").is_some_and(|s| s.contains("display:none")) {
-        return true;
-    }
-    false
+    el.attr("style").is_some_and(|s| s.contains("display:none"))
 }
 
 #[cfg(test)]
